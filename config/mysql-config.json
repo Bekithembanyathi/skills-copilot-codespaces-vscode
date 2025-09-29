@@ -1,0 +1,26 @@
+{
+  "mysql": {
+    "host": "localhost",
+    "port": 3306,
+    "user": "root",
+    "password": "",
+    "database": "mysql",
+    "connectTimeout": 5000,
+    "acquireTimeout": 5000
+  },
+  "monitoring": {
+    "performanceHistorySize": 100,
+    "defaultMonitoringInterval": 60,
+    "enableSystemMetrics": true
+  },
+  "logging": {
+    "level": "info",
+    "enableConsole": true,
+    "enableFile": false
+  },
+  "security": {
+    "enableSudo": true,
+    "allowServiceManagement": true,
+    "allowProcessKill": true
+  }
+}

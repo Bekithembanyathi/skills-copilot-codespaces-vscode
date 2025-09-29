@@ -1,0 +1,34 @@
+{
+  "name": "mysql-mcp-servers",
+  "version": "1.0.0",
+  "description": "Three MCP servers for MySQL monitoring and management",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js start",
+    "stop": "node index.js stop",
+    "restart": "node index.js restart",
+    "status": "node index.js status",
+    "start:process-monitor": "node servers/mysql-process-monitor/index.js",
+    "start:service-manager": "node servers/mysql-service-manager/index.js",
+    "start:performance-monitor": "node servers/mysql-performance-monitor/index.js",
+    "setup": "./setup.sh",
+    "test": "node test-mcp.js",
+    "test:mcp": "node test-mcp.js"
+  },
+  "keywords": ["mcp", "mysql", "monitoring", "server", "task-manager"],
+  "author": "Bekithembanyathi",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "mysql2": "^3.6.5",
+    "node-cron": "^3.0.3",
+    "systeminformation": "^5.21.20"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

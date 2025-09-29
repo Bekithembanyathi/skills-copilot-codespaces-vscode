@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "mysql-process-monitor": {
+      "command": "node",
+      "args": ["servers/mysql-process-monitor/index.js"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "mysql-service-manager": {
+      "command": "node",
+      "args": ["servers/mysql-service-manager/index.js"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "mysql-performance-monitor": {
+      "command": "node",
+      "args": ["servers/mysql-performance-monitor/index.js"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
