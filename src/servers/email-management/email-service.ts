@@ -8,7 +8,7 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: false, // true for 465, false for other ports
@@ -405,7 +405,7 @@ export class EmailService {
             <li><strong>Check-in:</strong> {{checkIn}}</li>
             <li><strong>Check-out:</strong> {{checkOut}}</li>
             <li><strong>Guests:</strong> {{guests}}</li>
-            <li><strong>Total Amount:</strong> ${{totalAmount}}</li>
+            <li><strong>Total Amount:</strong> $\{\{totalAmount\}\}</li>
           </ul>
           <p>Thank you for choosing our services!</p>
           <p>Best regards,<br>Your Hotel Team</p>
@@ -423,7 +423,7 @@ export class EmailService {
           <p>We have received your payment. Here are the details:</p>
           <ul>
             <li><strong>Payment ID:</strong> {{paymentId}}</li>
-            <li><strong>Amount:</strong> ${{amount}}</li>
+            <li><strong>Amount:</strong> $\{\{amount\}\}</li>
             <li><strong>Method:</strong> {{paymentMethod}}</li>
             <li><strong>Status:</strong> {{status}}</li>
             <li><strong>Date:</strong> {{paymentDate}}</li>

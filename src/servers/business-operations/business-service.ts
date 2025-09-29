@@ -36,7 +36,7 @@ export class BusinessOperationsService {
     }
   }
 
-  async getBooking(bookingId: string): Promise<Booking | null> {
+  async getBooking(bookingId: string): Promise<any> {
     try {
       const booking = await BookingModel.findOne({ id: bookingId }).lean();
       return booking;
@@ -46,7 +46,7 @@ export class BusinessOperationsService {
     }
   }
 
-  async updateBooking(bookingId: string, updates: Partial<Booking>): Promise<Booking | null> {
+  async updateBooking(bookingId: string, updates: any): Promise<any> {
     try {
       const updatedBooking = await BookingModel.findOneAndUpdate(
         { id: bookingId },
@@ -409,5 +409,251 @@ export class BusinessOperationsService {
       discountAmount,
       total
     };
+  }
+
+  // Extended API methods for reservation system
+  async getBookings(filters: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    serviceType?: string;
+    customerId?: string;
+  }): Promise<any> {
+    try {
+      const page = filters.page || 1;
+      const limit = filters.limit || 10;
+      const skip = (page - 1) * limit;
+
+      const query: any = {};
+      if (filters.status) query.status = filters.status;
+      if (filters.serviceType) query.serviceType = filters.serviceType;
+      if (filters.customerId) query.customerId = filters.customerId;
+
+      const bookings = await BookingModel.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+
+      const total = await BookingModel.countDocuments(query);
+
+      return {
+        bookings: bookings.map(b => b.toObject()),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      logger.error('Error getting bookings:', error);
+      throw new Error('Failed to get bookings');
+    }
+  }
+
+
+  async checkAvailability(params: {
+    checkIn: Date;
+    checkOut: Date;
+    serviceType: string;
+    guests?: number;
+  }): Promise<any> {
+    try {
+      // Check for conflicting bookings
+      const conflictingBookings = await BookingModel.find({
+        serviceType: params.serviceType,
+        status: { $in: ['confirmed', 'pending'] },
+        $or: [
+          {
+            checkIn: { $lte: params.checkOut },
+            checkOut: { $gte: params.checkIn }
+          }
+        ]
+      });
+
+      const isAvailable = conflictingBookings.length === 0;
+
+      return {
+        available: isAvailable,
+        conflictingBookings: conflictingBookings.length,
+        checkIn: params.checkIn,
+        checkOut: params.checkOut,
+        serviceType: params.serviceType
+      };
+    } catch (error) {
+      logger.error('Error checking availability:', error);
+      throw new Error('Failed to check availability');
+    }
+  }
+
+  async getBookingPayments(bookingId: string): Promise<any[]> {
+    try {
+      const payments = await PaymentModel.find({ bookingId });
+      return payments.map(p => p.toObject());
+    } catch (error) {
+      logger.error('Error getting booking payments:', error);
+      throw new Error('Failed to get booking payments');
+    }
+  }
+
+  async getBookingAnalytics(period: string): Promise<any> {
+    try {
+      const now = new Date();
+      const startDate = this.getPeriodStartDate(period, now);
+
+      const bookings = await BookingModel.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startDate }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              status: '$status',
+              serviceType: '$serviceType',
+              date: {
+                $dateToString: {
+                  format: period === 'day' ? '%Y-%m-%d' : '%Y-%m',
+                  date: '$createdAt'
+                }
+              }
+            },
+            count: { $sum: 1 },
+            totalAmount: { $sum: '$totalAmount' }
+          }
+        }
+      ]);
+
+      return bookings;
+    } catch (error) {
+      logger.error('Error getting booking analytics:', error);
+      throw new Error('Failed to get booking analytics');
+    }
+  }
+
+  async getRevenueAnalytics(period: string): Promise<any> {
+    try {
+      const now = new Date();
+      const startDate = this.getPeriodStartDate(period, now);
+
+      const revenue = await PaymentModel.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startDate },
+            status: 'completed'
+          }
+        },
+        {
+          $group: {
+            _id: {
+              date: {
+                $dateToString: {
+                  format: period === 'day' ? '%Y-%m-%d' : '%Y-%m',
+                  date: '$createdAt'
+                }
+              }
+            },
+            totalRevenue: { $sum: '$amount' },
+            transactionCount: { $sum: 1 }
+          }
+        }
+      ]);
+
+      return revenue;
+    } catch (error) {
+      logger.error('Error getting revenue analytics:', error);
+      throw new Error('Failed to get revenue analytics');
+    }
+  }
+
+  async getCustomerAnalytics(): Promise<any> {
+    try {
+      const analytics = await BookingModel.aggregate([
+        {
+          $group: {
+            _id: '$customerId',
+            customerName: { $first: '$customerName' },
+            customerEmail: { $first: '$customerEmail' },
+            totalBookings: { $sum: 1 },
+            totalSpent: { $sum: '$totalAmount' },
+            lastBooking: { $max: '$createdAt' }
+          }
+        },
+        {
+          $sort: { totalSpent: -1 }
+        },
+        {
+          $limit: 50
+        }
+      ]);
+
+      return analytics;
+    } catch (error) {
+      logger.error('Error getting customer analytics:', error);
+      throw new Error('Failed to get customer analytics');
+    }
+  }
+
+  async getDashboardSummary(): Promise<any> {
+    try {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const [todayStats, monthStats, recentBookings] = await Promise.all([
+        BookingModel.aggregate([
+          {
+            $match: { createdAt: { $gte: startOfDay } }
+          },
+          {
+            $group: {
+              _id: null,
+              totalBookings: { $sum: 1 },
+              totalRevenue: { $sum: '$totalAmount' }
+            }
+          }
+        ]),
+        BookingModel.aggregate([
+          {
+            $match: { createdAt: { $gte: startOfMonth } }
+          },
+          {
+            $group: {
+              _id: null,
+              totalBookings: { $sum: 1 },
+              totalRevenue: { $sum: '$totalAmount' }
+            }
+          }
+        ]),
+        BookingModel.find()
+          .sort({ createdAt: -1 })
+          .limit(5)
+      ]);
+
+      return {
+        today: todayStats[0] || { totalBookings: 0, totalRevenue: 0 },
+        thisMonth: monthStats[0] || { totalBookings: 0, totalRevenue: 0 },
+        recentBookings: recentBookings.map(b => b.toObject())
+      };
+    } catch (error) {
+      logger.error('Error getting dashboard summary:', error);
+      throw new Error('Failed to get dashboard summary');
+    }
+  }
+
+  private getPeriodStartDate(period: string, now: Date): Date {
+    switch (period) {
+      case 'day':
+        return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      case 'week':
+        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case 'month':
+        return new Date(now.getFullYear(), now.getMonth(), 1);
+      case 'year':
+        return new Date(now.getFullYear(), 0, 1);
+      default:
+        return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
   }
 }
