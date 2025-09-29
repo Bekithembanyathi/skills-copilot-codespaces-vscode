@@ -96,6 +96,7 @@ export interface User {
   firstName: string;
   lastName: string;
   phone: string;
+  password: string;
   role: 'admin' | 'manager' | 'staff' | 'customer';
   status: 'active' | 'inactive' | 'suspended';
   preferences: UserPreferences;
